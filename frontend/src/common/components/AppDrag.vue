@@ -26,5 +26,6 @@
         DATA_TRANSFER_PAYLOAD,
         JSON.stringify(props.transferData)
     );
+    console.log('drag', dataTransfer)
   }
 </script>
