@@ -15,7 +15,7 @@
           class="users-list__user"
       >
         <img
-            :src="getImage(currentWorker.avatar)"
+            :src="getPublicImage(currentWorker.avatar)"
             @click.stop="isMenuOpened = !isMenuOpened"
         />
         <span @click.stop="isMenuOpened = !isMenuOpened">
@@ -33,14 +33,14 @@
             class="users-list"
         >
           <li
-              v-for="user in users"
+              v-for="user in usersStore.users"
               :key="user.id"
           >
             <button
                 class="users-list__user"
                 @click="setUser(user.id)"
             >
-              <img :src="getImage(user.avatar)" />
+              <img :src="getPublicImage(user.avatar)" />
               <span>{{ user.name }}</span>
             </button>
           </li>
@@ -55,6 +55,8 @@ import users from '@/mocks/users.json'
 import { ref, computed } from 'vue'
 import { getImage } from '../../../common/helpers'
 import AppIcon from '@/common/components/AppIcon.vue'
+import { getPublicImage } from '../../../common/helpers'
+import { useUsersStore } from '@/stores'
 
 const props = defineProps({
   modelValue: {
@@ -62,11 +64,13 @@ const props = defineProps({
     default: null
   }
 })
+const usersStore = useUsersStore()
+
 const emits = defineEmits(['update:modelValue'])
 
 const isMenuOpened = ref(false)
 
-const currentWorker = computed(() => users.find(({ id }) => id === props.modelValue))
+const currentWorker = computed(() => usersStore.users.find(({ id }) => id === props.modelValue))
 
 function setUser(id) {
   emits('update:modelValue', id)

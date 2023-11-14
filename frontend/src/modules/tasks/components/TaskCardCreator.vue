@@ -186,10 +186,10 @@ import { createUUIDv4, createNewDate } from '@/common/helpers'
 import AppButton from '@/common/components/AppButton.vue'
 import { validateFields } from '@/common/validator'
 import TaskCardCreatorTags from './TaskCardCreatorTags.vue'
-import { useTasksStore } from '@/stores/tasks'
+import { useTasksStore, useTicksStore } from '@/stores'
 
 const tasksStore = useTasksStore()
-
+const ticksStore = useTicksStore()
 
 const createNewTick = () => ({
   // Добавляем временный идентификатор до момента отправки на сервер
@@ -207,6 +207,21 @@ const props = defineProps({
     default: null
   }
 })
+
+async function submitTicks (taskId, ticks) {
+  const promises = ticks
+      .map(tick => {
+        if (!tick.text) {
+          return
+        }
+        delete tick.uuid
+        tick.taskId = taskId
+        return tick.id
+            ? ticksStore.updateTick(tick)
+            : ticksStore.addTick(tick)
+      })
+  await Promise.all(promises)
+}
 
 // Функция для создания новых задач
 const createNewTask = () => ({
@@ -242,21 +257,25 @@ watch(task, () => {
   validations.value = setEmptyValidations()
 }, { deep: true })
 
-function submit () {
+async function submit () {
   // Валидируем задачу
   if (!validateFields(task.value, validations.value)) {
     isFormValid.value = false
     return
   }
+  let taskId = task.value.id
   if (props.taskToEdit) {
     // Редактируемая задача
-    tasksStore.editTask(task.value)
+    await tasksStore.editTask(task.value)
   } else {
     // Новая задача
-    tasksStore.addTask(task.value)
+    const newTask = await tasksStore.addTask(task.value)
+    taskId = newTask.id
   }
+  // Создать или обновить подзадачи
+  await submitTicks(taskId, task.value.ticks)
   // Переход на главную страницу
-  router.push('/')
+  await router.push('/')
 }
 function setTags (tags) {
   task.value.tags = tags
@@ -271,6 +290,17 @@ function deleteTask () {
   tasksStore.deleteTask(task.value.id)
   router.push('/')
 }
+
+function removeTick ({ uuid, id }) {
+  if (uuid) {
+    task.value.ticks = task.value.ticks.filter(tick => tick.uuid !== uuid)
+  }
+  if (id) {
+    task.value.ticks = task.value.ticks.filter(tick => tick.id !== id)
+    ticksStore.deleteTick(id)
+  }
+}
+
 
 const setEmptyValidations = () => ({
   title: {
